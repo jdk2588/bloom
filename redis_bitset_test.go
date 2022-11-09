@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis"
-	"github.com/bculberson/bloom"
 	"github.com/garyburd/redigo/redis"
+	"github.com/jdk2588/bloom"
 )
 
 func TestRedisBitSet_New_Set_Test(t *testing.T) {
