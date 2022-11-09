@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"encoding/binary"
+
 	"github.com/alicebob/miniredis"
-	"github.com/bculberson/bloom"
 	"github.com/garyburd/redigo/redis"
+	"github.com/jdk2588/bloom"
 )
 
 func TestRedisBloomFilter(t *testing.T) {
