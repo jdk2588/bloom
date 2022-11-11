@@ -8,6 +8,7 @@ import (
 type BitSetProvider interface {
 	Set([]uint) error
 	Test([]uint) (bool, error)
+	UnSet([]uint) error
 }
 
 type BloomFilter struct {
@@ -30,6 +31,15 @@ func EstimateParameters(n uint, p float64) (uint, uint) {
 func (f *BloomFilter) Add(data []byte) error {
 	locations := f.getLocations(data)
 	err := f.bitSet.Set(locations)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (f *BloomFilter) Remove(data []byte) error {
+	locations := f.getLocations(data)
+	err := f.bitSet.UnSet(locations)
 	if err != nil {
 		return err
 	}

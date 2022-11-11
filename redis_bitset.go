@@ -2,8 +2,9 @@ package bloom
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"strings"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 const redisMaxLength = 8 * 512 * 1024 * 1024
@@ -28,6 +29,18 @@ func (r *RedisBitSet) Set(offsets []uint) error {
 	for _, offset := range offsets {
 		key, thisOffset := r.getKeyOffset(offset)
 		err := r.conn.Send("SETBIT", key, thisOffset, 1)
+		if err != nil {
+			return err
+		}
+	}
+
+	return r.conn.Flush()
+}
+
+func (r *RedisBitSet) UnSet(offsets []uint) error {
+	for _, offset := range offsets {
+		key, thisOffset := r.getKeyOffset(offset)
+		err := r.conn.Send("SETBIT", key, thisOffset, 0)
 		if err != nil {
 			return err
 		}
