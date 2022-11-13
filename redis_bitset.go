@@ -2,6 +2,7 @@ package bloom
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/garyburd/redigo/redis"
@@ -16,19 +17,35 @@ type Connection interface {
 }
 
 type RedisBitSet struct {
-	keyPrefix string
-	conn      Connection
-	m         uint
+	keyPrefix    string
+	conn         Connection
+	m            uint
+	perRegionLen uint
+	pallete      []byte
 }
 
-func NewRedisBitSet(keyPrefix string, m uint, conn Connection) *RedisBitSet {
-	return &RedisBitSet{keyPrefix, conn, m}
+func NewRedisBitSet(keyPrefix string, m uint, conn Connection, numRegions int) *RedisBitSet {
+	perRegionLen := uint(math.Ceil(float64(m) / float64(numRegions)))
+	pallete := make([]byte, numRegions)
+	return &RedisBitSet{keyPrefix, conn, m, perRegionLen, pallete}
 }
 
 func (r *RedisBitSet) Set(offsets []uint) error {
+	var unSetBits []uint = make([]uint, 0, len(offsets))
 	for _, offset := range offsets {
 		key, thisOffset := r.getKeyOffset(offset)
-		err := r.conn.Send("SETBIT", key, thisOffset, 1)
+		bitValue, _ := redis.Int(r.conn.Do("GETBIT", key, thisOffset))
+		if bitValue == 0 {
+			r.conn.Send("SETBIT", key, thisOffset, 1)
+		} else {
+			unSetBits = append(unSetBits, thisOffset)
+		}
+	}
+
+	fmt.Println(unSetBits)
+	for i := range unSetBits {
+		posReg := unSetBits[i] / r.perRegionLen
+		err := r.conn.Send("SETBIT", fmt.Sprintf("%s_pallete", r.keyPrefix), posReg, 1)
 		if err != nil {
 			return err
 		}
@@ -39,10 +56,12 @@ func (r *RedisBitSet) Set(offsets []uint) error {
 
 func (r *RedisBitSet) UnSet(offsets []uint) error {
 	for _, offset := range offsets {
+		posReg := offset / r.perRegionLen
+		bitValue, _ := redis.Int(r.conn.Do("GETBIT", fmt.Sprintf("%s_pallete", r.keyPrefix), posReg))
 		key, thisOffset := r.getKeyOffset(offset)
-		err := r.conn.Send("SETBIT", key, thisOffset, 0)
-		if err != nil {
-			return err
+		fmt.Println(bitValue)
+		if bitValue == 0 {
+			r.conn.Send("SETBIT", key, thisOffset, 0)
 		}
 	}
 

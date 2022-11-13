@@ -7,8 +7,8 @@ import (
 
 type BitSetProvider interface {
 	Set([]uint) error
-	Test([]uint) (bool, error)
 	UnSet([]uint) error
+	Test([]uint) (bool, error)
 }
 
 type BloomFilter struct {
